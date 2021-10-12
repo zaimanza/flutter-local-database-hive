@@ -1,28 +1,60 @@
 import 'package:flutter/material.dart';
+import 'package:hive_database/models/contact.dart';
+import 'package:hive_database/screens/contact_add_screen.dart';
+import 'package:provider/provider.dart';
+import 'package:hive_database/models/contact_data.dart';
 import 'package:hive/hive.dart';
-import 'package:hive_database/model/transaction.dart';
-import 'package:hive_flutter/hive_flutter.dart';
-import 'package:hive_database/page/transaction_page.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:hive_database/screens/contact_list_screen.dart';
 
-Future main() async {
-  WidgetsFlutterBinding.ensureInitialized();
+void main() {
+  Hive.registerAdapter(ContactAdapter());
+  runApp(const MyApp());
+}
 
-  await Hive.initFlutter();
-
-  Hive.registerAdapter(TransactionAdapter());
-  await Hive.openBox<Transaction>('transactions');
-
-  runApp(MyApp());
+Future _initHive() async {
+  var dir = await getApplicationDocumentsDirectory();
+  Hive.init(dir.path);
 }
 
 class MyApp extends StatelessWidget {
-  static final String title = 'Hive Expense App';
+  const MyApp({Key? key}) : super(key: key);
 
+  // This widget is the root of your application.
   @override
-  Widget build(BuildContext context) => MaterialApp(
-        debugShowCheckedModeBanner: false,
-        title: title,
-        theme: ThemeData(primarySwatch: Colors.indigo),
-        home: TransactionPage(),
-      );
+  Widget build(BuildContext context) {
+    return ChangeNotifierProvider(
+      create: (context) => ContactsData(),
+      child: MaterialApp(
+        title: 'Flutter Demo',
+        theme: ThemeData(
+          primarySwatch: Colors.blue,
+        ),
+        initialRoute: '/',
+        routes: {
+          '/': (context) => FutureBuilder(
+                future: _initHive(),
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.done) {
+                    if (snapshot.error != null) {
+                      // ignore: avoid_print
+                      print(snapshot.error);
+                      return const Scaffold(
+                        body: Center(
+                          child: Text('Error initializing hive data store.'),
+                        ),
+                      );
+                    } else {
+                      return const ContactListScreen();
+                    }
+                  } else {
+                    return const Scaffold();
+                  }
+                },
+              ),
+          '/AddContactScreen': (context) => ContactAddScreen(),
+        },
+      ),
+    );
+  }
 }
